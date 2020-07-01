@@ -1,0 +1,696 @@
+/**
+ * Class build container for popupper plugin
+ * consist of iframe where load signin form
+ * @see #URL_ROOT, #URI_SIGNIN
+ * @uses jQuery, jQuery.popupper
+ * @author deniss.kozlov
+ */
+(function($){
+
+window.FxcommLogin = function(){
+
+$.extend(this, {
+
+	/**
+	 * Container ID
+	 * @see #build()
+	 * @type String
+	 */
+	ELEMENT_ID	: 'fxcommsignin',
+
+	/**
+	 * Address of  community host
+	 * @type String
+	 */
+	URL_ROOT	: 'https://www.dukascopy.com/fxcomm/',
+
+	/**
+	 * Url part of signin form
+	 * @type String
+	 */
+	URI_SIGNIN	: 'login/',
+
+    URI_SIGNIN_PARAMS: {},
+
+	/**
+	 * Default parameters
+	 * @see #init()
+	 * @type {}
+	 */
+	options: {
+		width		: 510,		// width of iframe
+		height		: 270,		// height of iframe
+		holder		: '',		// holder id for bind click
+		redirect	: window.location.href,	// after success reload address
+		timeout		: 1000,		// close effect timeout
+        autoClose   : true,
+        popup       : false,
+        iframe      : false,
+        action      : 'login', // 'login', 'register', 'forgot'
+        title       : false,   // window title [String|false]
+        welcomeMessage: false, // Welcome Message - [object{title: 'Lorem ipsum title', message: 'Lorem ipsum message message'}|false]
+        guestButton : false,   // show guest button - [true|false]
+        createAccount : false,  // show demo registration options by default(use with action="register")
+        margin : 0 // default margin for iframe in modal window( fancybox )
+	},
+
+    window: {},
+
+	// constructor
+	_construct: function(){
+		this.build();
+	},
+
+	/**
+	 * Build container in body tag
+	 * for popupper
+	 * @return void
+	 */
+	build: function(){
+
+	},
+
+	/**
+	 * Initializing form, and attach popupper event
+	 * @see #options
+	 * @param {} options for rewrite rules
+	 * @return void
+	 */
+	init: function(options){
+		// rewrite options
+		$.extend(this.options, options);
+
+        switch (this.options.action) {
+            case 'register':
+                this.URI_SIGNIN = 'register/';
+                if (this.options.demoByDefault) {
+                  this.URI_SIGNIN_PARAMS.createAccount = '1';
+                }
+                break;
+            case 'forgot':
+                this.URI_SIGNIN = 'login/';
+                this.URI_SIGNIN_PARAMS.action = 'forgot';
+                break;
+            case 'login':
+                this.URI_SIGNIN = 'login/';
+                break;
+            case 'check':
+                this.URI_SIGNIN = 'login/check.php';
+                break;
+            default:
+                break;
+        }
+
+        if (typeof this.options.iframe == 'string') {
+            this.ELEMENT_ID = this.options.iframe;
+        } else {
+            this.options.iframe = false;
+        }
+
+        if (this.options.showBox == true){
+            this.showBox();
+        } else {
+		    this.bind();
+        }
+	},
+
+  checkAuth: function (callback) {
+    var iframeContainer = document.createElement('div')
+      , id = 'id' + (Math.random() * (1 << 30)).toString(16).replace('.', '');
+    iframeContainer.style.display = 'none';
+    document.body.appendChild(iframeContainer);
+    iframeContainer.innerHTML = this.windowHtml(id);
+    this.onReceiveMessage = function (data) {
+      callback(data);
+
+    };
+    this.init({
+      iframe: id,
+      action: 'check'
+    });
+  },
+
+    windowHtml: function (id) {
+        return '<iframe id="' + (id ? id : this.ELEMENT_ID)
+             + '" name="' + (id ? id : this.ELEMENT_ID)
+             + '" src="about:blank" frameborder="0" ' +
+            'style="'
+             + 'width:'  + this.options.width  + 'px;'
+             + 'height:' + this.options.height + 'px;'
+             + 'margin:' + this.options.margin + 'px;"></iframe>';
+    },
+
+    initWindow: function () {
+
+        var currentLocation = location.href;
+        var isPopupWin = this.options.popup;
+
+        var hashIndex = currentLocation.indexOf('#');
+        if (hashIndex > -1) {
+            currentLocation = currentLocation.substring(0, hashIndex);
+        }
+        var params = {
+            clear_location: currentLocation,
+            popup: 1
+        };
+        if (this.options.welcomeMessage) {
+            params.clear_message = this.options.welcomeMessage;
+        }
+        if (this.options.guestButton) {
+            params.clear_guest_button = 1;
+        } else {
+            params.clear_guest_button = 0;
+        }
+        if (isPopupWin) {
+            params.popupWin = 1;
+        }
+        if (this.options.apiKey) {
+            params.apiKey = this.options.apiKey;
+        }
+        if (this.options.createAccount) {
+            params.createAccount = 1;
+        }
+        if (this.options.hideTabs) {
+            params.hideTabs = 1;
+        }
+        //
+        var url = this.URL_ROOT.replace(/^http\:\/\//i, 'https://')
+                + this.URI_SIGNIN;
+        // open window or init existing iframe
+        if (isPopupWin) {
+            if (this.URI_SIGNIN_PARAMS.length > 0) {
+                url += '?' + $.param(this.URI_SIGNIN_PARAMS)
+            }
+            url += '#' + currentLocation;
+            $('#' + this.options.holder).bind('click', $.proxy(function () {
+                this.window = this.popupWin(url, 'fxcommsigninWindow', this.options.width, this.options.height, 'yes', params);
+            }, this));
+        } else {
+            //url += '?' + $.param($.extend({}, this.URI_SIGNIN_PARAMS, params)) + '#' + currentLocation;
+            //this.window = $('#' + this.ELEMENT_ID).attr('src', url);
+            url += '?' + $.param($.extend({}, this.URI_SIGNIN_PARAMS)) + '#' + currentLocation;
+            var form = this.sendPost(url, this.ELEMENT_ID, params);
+            form.submit();
+            form.remove();
+            this.window = $('#' + this.ELEMENT_ID);
+        }
+        // init cross window messaging
+        $.receiveMessage($.proxy(function(e){
+            if (e.data) {
+                var params = {};
+                if (e.data) {
+                    var regex = /(.+?)=(.+?)(?:&|;|$)/g,
+                        match;
+                    while (match = regex.exec(e.data)) {
+                        params[match[1]] = decodeURIComponent(match[2]);
+                    }
+                }
+                this.onReceiveMessage(params);
+            }
+        }, this), this.URL_ROOT.replace( /([^:]+:\/\/[^\/]+).*/, '$1' ));
+    },
+
+	/**
+	 * Bind events to handler
+	 * @return void
+	 */
+	bind: function(){
+
+        var self = this;
+        
+        //this.options.popup = true;
+        //this.options.iframe = true;
+        if (!this.options.popup && !this.options.iframe) {
+            // on trigger click, load source URL sign-if form
+            $('#' + this.options.holder).bind('click', function(){
+                    self.options.holder = this.id;
+                    $.fancybox({
+                        title: (self.options.title === false) ? 'Dukascopy Forex Community' : self.options.title,
+                        titleColor: 'red',
+                        titleIcon: 'swiss',
+//                        type: 'inline',
+//                        href: '#' + self.ELEMENT_ID,
+                        content: self.windowHtml(),
+                        showNavArrows: false,
+                        padding: 0,
+                        margin: 0,
+                        onComplete: $.proxy(self.initWindow, self),
+                        afterShow: $.proxy(self.initWindow, self)
+                    });
+            });
+        } else {
+            this.initWindow();
+        }
+	},
+
+    /**
+     * Bind events to handler
+     * @return void
+     */
+    showBox: function(){
+
+        var self = this;
+        //this.options.popup = true;
+        //this.options.iframe = true;
+        if (!this.options.popup && !this.options.iframe) {
+            // on trigger click, load source URL sign-if form
+                self.options.holder = this.id;
+                $.fancybox({
+                    title: (self.options.title === false) ? 'Dukascopy Forex Community' : self.options.title,
+                    titleColor: 'red',
+                    titleIcon: 'swiss',
+//                        type: 'inline',
+//                        href: '#' + self.ELEMENT_ID,
+                    content: self.windowHtml(),
+                    showNavArrows: false,
+                    padding: 0,
+                    margin: 0,
+                    onComplete: $.proxy(self.initWindow, self),
+                    afterShow: $.proxy(self.initWindow, self),
+                    onUpdate: function(){
+                        if ($('#' + self.ELEMENT_ID).contents().find('html').height() > 100) {
+                            self.setIframeHeight({
+                                height: $('#' + self.ELEMENT_ID).contents().find('html').height()
+                            });
+                        }
+                    }
+                });
+        } else {
+            this.initWindow();
+        }
+    },
+
+	/**
+	 * Method, call from inner iframe,
+	 * close, form and reload page
+	 * @return void
+	 */
+	success: function(){
+        var redirect = this.options.redirect; // window.location.href
+        if ($('#' + this.options.holder).attr('redirect')) {
+            redirect = $('#' + this.options.holder).attr('redirect');
+        }
+		// close popup window
+        if (!this.options.popup) {
+		    $.fancybox.close();
+        } else {
+            this.window.close();
+        }
+        window.location.href = redirect.replace( window.parent.location.hash, "" );
+	},
+
+    onReceiveMessage: function (data) {
+        this.setIframeHeight(data);
+        this.setApiToken(data);
+        this.setRedirect(data);
+    },
+
+    setIframeHeight: function(params){
+        var height = params.height && parseInt(params.height);
+        if (height) {
+            $(this.window).height(height);
+            if ( typeof $.fancybox != 'undefined' ) {
+                $.fancybox.reposition();
+            }
+        }
+    },
+
+    setApiToken: function(params){
+        if (params.success) {
+            if (params.token && typeof this.options.onLogin == 'function') {
+                this.options.onLogin(params.token);
+            } else if (parseInt(params.isGuest) == 1) {  
+                this.options.onLoginAsGuest();
+            }
+            if (this.options.autoClose) {
+                if (!this.options.popup) {
+                    if ( typeof $.fancybox != 'undefined') {
+                        $.fancybox.close();
+                    }
+                } else {
+                    this.window.close();
+                }
+            }
+        }
+    },
+
+    setRedirect: function(params){
+        if (params.redirect) {
+            window.location.href = params.redirect;
+        }
+    },
+    sendPost: function (url, id, params) {
+            var form = $(document.createElement('form')).attr({
+                method: "post",
+                action: url,
+                // setting form target to a window
+                target: id
+            });
+            for (var i in params) {
+                if (typeof (params[i]) == 'object') {
+                    for (var j in params[i]) {
+                        $(document.createElement("input")).attr({
+                            type: 'hidden',
+                            name: i + '[' + j + ']' ,
+                            value: params[i][j]
+                        }).appendTo(form);
+                    }
+                } else {
+                    $(document.createElement("input")).attr({
+                        type: 'hidden',
+                        name: i,
+                        value: params[i]
+                    }).appendTo(form);                    
+                }
+            }
+            form.appendTo(document.body);
+            return form;
+    },
+    popupWin: function (url, id, width, height, scrollbars, postParams) {
+        // we try to place it at the center of the current window
+        var
+        screenX    = typeof window.screenX      != 'undefined'
+            ? window.screenX
+            : window.screenLeft,
+        screenY    = typeof window.screenY      != 'undefined'
+            ? window.screenY
+            : window.screenTop,
+        outerWidth = typeof window.outerWidth   != 'undefined'
+            ? window.outerWidth
+            : document.documentElement.clientWidth,
+        outerHeight = typeof window.outerHeight != 'undefined'
+            ? window.outerHeight
+            : (document.documentElement.clientHeight - 22), // 22= IE toolbar height
+        left     = parseInt(screenX + ((outerWidth - width) / 2), 10),
+        top      = parseInt(screenY + ((outerHeight - height) / 2.5), 10),
+        features = (
+            'width=' + width +
+            ',height=' + height +
+            ',left=' + left +
+            ',top=' + top +
+            ',scrollbars=' + (scrollbars ? scrollbars : 'yes')
+        );
+        if (typeof postParams == 'object') {
+            var form = this.sendPost(url, id, postParams);            
+            var win = window.open('', id, features);
+            // post params to window
+            form.submit();
+            return win;
+        } else {
+            return window.open(url, id, features);
+        }
+    }
+});
+    this._construct();
+
+};
+
+window.FxcommSignIn = new FxcommLogin();
+
+})(jQuery);
+
+/*!
+ * jQuery postMessage - v0.5 - 9/11/2009
+ * http://benalman.com/projects/jquery-postmessage-plugin/
+ *
+ * Copyright (c) 2009 "Cowboy" Ben Alman
+ * Dual licensed under the MIT and GPL licenses.
+ * http://benalman.com/about/license/
+ */
+
+// Script: jQuery postMessage: Cross-domain scripting goodness
+//
+// *Version: 0.5, Last updated: 9/11/2009*
+//
+// Project Home - http://benalman.com/projects/jquery-postmessage-plugin/
+// GitHub       - http://github.com/cowboy/jquery-postmessage/
+// Source       - http://github.com/cowboy/jquery-postmessage/raw/master/jquery.ba-postmessage.js
+// (Minified)   - http://github.com/cowboy/jquery-postmessage/raw/master/jquery.ba-postmessage.min.js (0.9kb)
+//
+// About: License
+//
+// Copyright (c) 2009 "Cowboy" Ben Alman,
+// Dual licensed under the MIT and GPL licenses.
+// http://benalman.com/about/license/
+//
+// About: Examples
+//
+// This working example, complete with fully commented code, illustrates one
+// way in which this plugin can be used.
+//
+// Iframe resizing - http://benalman.com/code/projects/jquery-postmessage/examples/iframe/
+//
+// About: Support and Testing
+//
+// Information about what version or versions of jQuery this plugin has been
+// tested with and what browsers it has been tested in.
+//
+// jQuery Versions - 1.3.2
+// Browsers Tested - Internet Explorer 6-8, Firefox 3, Safari 3-4, Chrome, Opera 9.
+//
+// About: Release History
+//
+// 0.5 - (9/11/2009) Improved cache-busting
+// 0.4 - (8/25/2009) Initial release
+
+(function($){
+  '$:nomunge'; // Used by YUI compressor.
+
+  // A few vars used in non-awesome browsers.
+  var interval_id,
+    last_hash,
+    cache_bust = 1,
+
+    // A var used in awesome browsers.
+    rm_callback,
+
+    // A few convenient shortcuts.
+    window = this,
+    FALSE = !1,
+
+    // Reused internal strings.
+    postMessage = 'postMessage',
+    addEventListener = 'addEventListener',
+
+    p_receiveMessage,
+
+    has_postMessage = window[postMessage];
+
+  // Method: jQuery.postMessage
+  //
+  // This method will call window.postMessage if available, setting the
+  // targetOrigin parameter to the base of the target_url parameter for maximum
+  // security in browsers that support it. If window.postMessage is not available,
+  // the target window's location.hash will be used to pass the message. If an
+  // object is passed as the message param, it will be serialized into a string
+  // using the jQuery.param method.
+  //
+  // Usage:
+  //
+  // > jQuery.postMessage( message, target_url [, target ] );
+  //
+  // Arguments:
+  //
+  //  message - (String) A message to be passed to the other frame.
+  //  message - (Object) An object to be serialized into a params string, using
+  //    the jQuery.param method.
+  //  target_url - (String) The URL of the other frame this window is
+  //    attempting to communicate with. This must be the exact URL (including
+  //    any query string) of the other window for this script to work in
+  //    browsers that don't support window.postMessage.
+  //  target - (Object) A reference to the other frame this window is
+  //    attempting to communicate with. If omitted, defaults to `parent`.
+  //
+  // Returns:
+  //
+  //  Nothing.
+
+  $[postMessage] = function( message, target_url, target ) {
+    if ( !target_url ) {return;}
+
+    // Serialize the message if not a string. Note that this is the only real
+    // jQuery dependency for this script. If removed, this script could be
+    // written as very basic JavaScript.
+    message = typeof message === 'string' ? message : $.param( message );
+
+    // Default to parent if unspecified.
+    target = target || parent;
+
+    if ( has_postMessage ) {
+      // The browser supports window.postMessage, so call it with a targetOrigin
+      // set appropriately, based on the target_url parameter.
+      target[postMessage]( message, decodeURIComponent(target_url).replace( /([^:]+:\/\/[^\/]+).*/, '$1' ) );
+
+    } else if ( target_url ) {
+      // The browser does not support window.postMessage, so set the location
+      // of the target to target_url#message. A bit ugly, but it works! A cache
+      // bust parameter is added to ensure that repeat messages trigger the
+      // callback.
+      target.location = target_url.replace( /#.*$/, '' ) + '#' + (+new Date) + (cache_bust++) + '&' + message;
+    }
+  };
+
+  // Method: jQuery.receiveMessage
+  //
+  // Register a single callback for either a window.postMessage call, if
+  // supported, or if unsupported, for any change in the current window
+  // location.hash. If window.postMessage is supported and source_origin is
+  // specified, the source window will be checked against this for maximum
+  // security. If window.postMessage is unsupported, a polling loop will be
+  // started to watch for changes to the location.hash.
+  //
+  // Note that for simplicity's sake, only a single callback can be registered
+  // at one time. Passing no params will unbind this event (or stop the polling
+  // loop), and calling this method a second time with another callback will
+  // unbind the event (or stop the polling loop) first, before binding the new
+  // callback.
+  //
+  // Also note that if window.postMessage is available, the optional
+  // source_origin param will be used to test the event.origin property. From
+  // the MDC window.postMessage docs: This string is the concatenation of the
+  // protocol and "://", the host name if one exists, and ":" followed by a port
+  // number if a port is present and differs from the default port for the given
+  // protocol. Examples of typical origins are https://example.org (implying
+  // port 443), http://example.net (implying port 80), and http://example.com:8080.
+  //
+  // Usage:
+  //
+  // > jQuery.receiveMessage( callback [, source_origin ] [, delay ] );
+  //
+  // Arguments:
+  //
+  //  callback - (Function) This callback will execute whenever a <jQuery.postMessage>
+  //    message is received, provided the source_origin matches. If callback is
+  //    omitted, any existing receiveMessage event bind or polling loop will be
+  //    canceled.
+  //  source_origin - (String) If window.postMessage is available and this value
+  //    is not equal to the event.origin property, the callback will not be
+  //    called.
+  //  source_origin - (Function) If window.postMessage is available and this
+  //    function returns false when passed the event.origin property, the
+  //    callback will not be called.
+  //  delay - (Number) An optional zero-or-greater delay in milliseconds at
+  //    which the polling loop will execute (for browser that don't support
+  //    window.postMessage). If omitted, defaults to 100.
+  //
+  // Returns:
+  //
+  //  Nothing!
+
+  $.receiveMessage = p_receiveMessage = function( callback, source_origin, delay ) {
+    if ( has_postMessage ) {
+      // Since the browser supports window.postMessage, the callback will be
+      // bound to the actual event associated with window.postMessage.
+
+      if ( callback ) {
+        // Unbind an existing callback if it exists.
+        rm_callback && p_receiveMessage();
+
+        // Bind the callback. A reference to the callback is stored for ease of
+        // unbinding.
+        rm_callback = function(e) {
+          if ( ( typeof source_origin === 'string' && e.origin !== source_origin )
+            || ( $.isFunction( source_origin ) && source_origin( e.origin ) === FALSE ) ) {
+            return FALSE;
+          }
+          callback( e );
+        };
+      }
+
+      if ( window[addEventListener] ) {
+        window[ callback ? addEventListener : 'removeEventListener' ]( 'message', rm_callback, FALSE );
+      } else {
+        window[ callback ? 'attachEvent' : 'detachEvent' ]( 'onmessage', rm_callback );
+      }
+
+    } else {
+      // Since the browser sucks, a polling loop will be started, and the
+      // callback will be called whenever the location.hash changes.
+
+      interval_id && clearInterval( interval_id );
+      interval_id = null;
+
+      if ( callback ) {
+        delay = typeof source_origin === 'number'
+          ? source_origin
+          : typeof delay === 'number'
+            ? delay
+            : 100;
+
+        interval_id = setInterval(function(){
+          var hash = document.location.hash,
+            re = /^#?\d+&/;
+          if ( hash !== last_hash && re.test( hash ) ) {
+            last_hash = hash;
+            callback({data: hash.replace( re, '' )});
+          }
+        }, delay );
+      }
+    }
+  };
+
+})(jQuery);
+
+(function ($) {
+    $.OAuthPopup = function (options) {
+        if (!options || !options.path) {
+            throw new Error("options.path must not be empty");
+        }
+        if ( ! options.params ) {
+            options.params = {};
+        }
+
+        var
+            $this   = this,
+            wPath   = options.path,
+            wName   = options.name,
+            screenX = typeof window.screenX      != 'undefined'
+                ? window.screenX
+                : window.screenLeft,
+            screenY = typeof window.screenY      != 'undefined'
+                ? window.screenY
+                : window.screenTop,
+            outerWidth = typeof window.outerWidth   != 'undefined'
+                ? window.outerWidth
+                : document.documentElement.clientWidth,
+            outerHeight = typeof window.outerHeight != 'undefined'
+                ? window.outerHeight
+                : (document.documentElement.clientHeight - 22), // 22= IE toolbar height
+            width   = options.params.width || 500,
+            height  = options.params.height || 560,
+
+            left    = parseInt(screenX + ((outerWidth - width) / 2), 10),
+            top     = parseInt(screenY + ((outerHeight - height) / 2.5), 10),
+            wParams = {
+                width       : width,
+                height      : height,
+
+                top         : top,
+                left        : left,
+
+                location    : options.params.location || 1,
+                menubar     : options.params.menubar || 0,
+                resizable   : options.params.resizable || 0,
+                scrollbars  : options.params.scrollbars || 1,
+                status      : options.params.status || 0,
+                titlebar    : options.params.titlebar || 0
+            },
+            callback    = options.callback || function(){ window.location.reload(); };
+
+        var _params = '';
+        for (var __key in wParams ) {
+            _params += __key + '=' + wParams[__key] + ',';
+        }
+
+        $this._OAuthWindow = window.open(wPath, wName, _params.substring(0, _params.length - 1));
+
+        $this._OAuthInterval = window.setInterval(function(){
+            if ( $this._OAuthWindow.closed) {
+                window.clearInterval($this._OAuthInterval);
+                callback();
+            }
+        }, 1000);
+    };
+
+}(jQuery));
+

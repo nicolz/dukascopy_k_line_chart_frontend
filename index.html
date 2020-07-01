@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<title>Charts</title>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="static/chartui.css"/>
+<script nonce="e4616d931f1f52afef5a53cb" src="static/jquery-1.6.3.min.js"></script>
+<!--<script nonce="e4616d931f1f52afef5a53cb" src="//www.dukascopy.com/fxcomm/common/script/?action=signin"></script>-->
+<style nonce="67e6225d2cf868f83bdd3bba"> 
+	
+	body, html {
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		height: 100%;
+	}
+</style>
+<!--[if lt IE 9]>
+<! --<script nonce="e4616d931f1f52afef5a53cb" src="https://freeserv-static.dukascopy.com/2.0/v/0.42.45/iecanvas.js"></script>-->
+<!-- [endif] -->
+<script nonce="e4616d931f1f52afef5a53cb">
+	window.dc = window.dc || {};
+	window.dc.i18n = window.dc.i18n || {};
+	window.dc.i18n.NS = 'chart';
+</script>
+<!--<script nonce="e4616d931f1f52afef5a53cb" src="https://freeserv.dukascopy.com/2.0/index.php?path=common/translation&lang=zh"></script>-->
+<script nonce="e4616d931f1f52afef5a53cb" src="static/chartui.js"></script>
+<script nonce="e4616d931f1f52afef5a53cb">
+	window.onload = function() {
+		var ui = new dc.ChartUI(window.location.search.replace(/^\?/, ''));
+		// ui.setTime(1593479298000);
+		// ui.setAuthType(dc.chartui.AuthType.OWNFXCOMM);
+		// ui.setFxcommOptions({
+		// 	fxcommCountriesUri: 'https://freeserv.dukascopy.com/2.0/index.php?path=common/countries',
+		// 	fxcommUri: 'https://fxcomm-auth.dukascopy.com/',
+		// 	fxcommReturnUri: 'https://freeserv.dukascopy.com/2.0/',
+		// 	fxcommSocialReturnUri: 'https://freeserv.dukascopy.com/2.0/index.php?path=fxcomm/social',
+		// 	fxcommTermsUri: 'https://www.dukascopy.com/fxcomm/register/?action=print-terms',
+		// 	fxcommDownloadTermsUri: 'https://www.dukascopy.com/fxcomm/register/?action=download-terms'
+		// });
+        ui.showLogo(false);
+        // ui.disclaimerURI('https://freeserv.dukascopy.com/2.0/index.php?path=common/disclaimer');
+		// ui.watermarkImage('static/watermark.png');
+		// ui.chartUri('https://freeserv.dukascopy.com/2.0/index.php?path=chart/popup');
+		// ui.setWorkspaceChartURI('//freeserv.dukascopy.com/2.0/');
+		// ui.setSocialSharingChartURI('https://freeserv.dukascopy.com/2.0/');
+		ui.showContextMenu(true);
+		ui.showNewsButton(true);
+		ui.showObjectPane(true);
+		// ui.chartSettingsDialog(true);
+        // ui.allowChartWorkspaceImport(true);
+        // ui.allowChartWorkspaceExport(true);
+        // ui.allowSocialSharing(true);
+        // ui.showPanDialog(true);
+        // ui.showIndicatorsDialog(true);
+        // ui.showTabs(true);
+		ui.instrumentUri('https://freeserv.dukascopy.com/2.0/index.php?path=common/instruments');
+		// ui.instrumentUri('/2.0/index.php?path=common/instruments');
+		ui.downloadifyImage('static/downloadify.png');
+		ui.downloadifySWF('static/downloadify.swf');
+		ui.appendChartOptions({
+			liveEmulation: true,
+			eet: true,
+            transportType: dc.TransportType.FREESERV,
+			dataServerURI: 'https://freeserv.dukascopy.com/2.0/index.php?path=chart/json3',
+            disclaimerURI: 'https://freeserv.dukascopy.com/2.0/?path=common/disclaimer',
+			newsServerURI: 'https://freeserv.dukascopy.com/2.0/index.php?path=economic_calendar/getNewsForInstrument',
+			timezonesUri: 'https://freeserv.dukascopy.com/2.0/index.php?path=common/timezones&timezone=America/New_York',
+            // dataServerURI: '/2.0/index.php?path=chart/json3',
+            // disclaimerURI: '/2.0/?path=common/disclaimer',
+			// newsServerURI: '/2.0/index.php?path=economic_calendar/getNewsForInstrument',
+			// timezonesUri: '/2.0/index.php?path=common/timezones&timezone=America/New_York',
+			usStocksDelay: true
+		});
+		ui.setLanguage('zh');
+		// ui.setFxspiderUri('https://www.dukascopy.com/fxspider');
+		// ui.setFxspiderToken('asGFt457kgHqqqg68vdgjJHFtDG6lghy7cdHHfqh');
+		ui.render();
+
+		var chart = ui.getChart();
+		//chart.setDataCache(new dc.CompressedDataCache());
+		chart.setTimeLineScroller(true);
+		chart.init();
+			};
+</script>
